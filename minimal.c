@@ -2,6 +2,9 @@
 // gcc minimal.c -lavformat -lavcodec -lavutil -lswscale
 // Add -L"/path/to/external/ffmpeg/libraries" to command above if those libraries are not in the default path
 
+// Run with arguments:
+// ./a.out example.mp4 out.yuv out.rgb
+
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
@@ -19,6 +22,7 @@ void save_rgb(const AVFrame* f, enum AVPixelFormat px, int width, int height, co
     int rlinesize[4] = {width, 0, 0, 0};
     sws_scale(sws, (const uint8_t* const*)(f->data), f->linesize, 0, f->height,
               rdata, rlinesize);
+
     FILE* fobj = fopen(fn, "wb");
     if (fobj) {
         fwrite(im_buf, 1, imbufsize, fobj);
@@ -47,8 +51,10 @@ void save_yuv(const char *filename, const struct AVFrame *pic) {
 }
 
 int main(int argc, char** argv) {
-    if (argc < 4)
+    if (argc < 4) {
+        printf("Usage: %s <input_video> <output_yuv> <output_rgb>\n", argv[0]);
         return 1;
+    }
     const char *path_in = argv[1], *path_yuv = argv[2], *path_rgb = argv[3];
     struct AVFormatContext* fmt_ctx = avformat_alloc_context();
     int ret = avformat_open_input(&fmt_ctx, path_in, NULL, NULL);
@@ -90,9 +96,9 @@ int main(int argc, char** argv) {
             }
         } else {
             save_yuv(path_yuv, frame);
-            printf("Play with \"ffplay -f rawvideo -pix_fmt yuv420p -video_size 852x480 %s\"\n", path_yuv);
+            printf("Play with \"ffplay -f rawvideo -pixel_format yuv420p -video_size 852x480 %s\"\n", path_yuv);
             save_rgb(frame, codec_ctx->pix_fmt, 1280, 720, path_rgb);
-            printf("Play with \"ffplay -f rawvideo -pix_fmt rgb24 -video_size 1280x720 %s\"\n", path_rgb);
+            printf("Play with \"ffplay -f rawvideo -pixel_format rgb24 -video_size 1280x720 %s\"\n", path_rgb);
             av_frame_unref(frame);
             break;
         }
